@@ -19,7 +19,6 @@ from torch.utils.data import Dataset, DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
 
 
-
 def same_seed(seed): 
     '''Fixes random number generator seeds for reproducibility.'''
     torch.backends.cudnn.deterministic = True
@@ -74,25 +73,29 @@ class My_Model(nn.Module):
         # TODO: modify model's structure, be aware of dimensions. 
         self.layers = nn.Sequential(
             nn.Linear(input_dim, 16),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(16, 8),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(8, 1)
         )
-
     def forward(self, x):
         x = self.layers(x)
         x = x.squeeze(1) # (B, 1) -> (B)
         return x
+
 def select_feat(train_data, valid_data, test_data, select_all=True):
     '''Selects useful features to perform regression'''
     y_train, y_valid = train_data[:,-1], valid_data[:,-1]
-    raw_x_train, raw_x_valid, raw_x_test = train_data[:,:-1], valid_data[:,:-1], test_data
+    raw_x_train, raw_x_valid, raw_x_test = train_data[:,1:-1], valid_data[:,1:-1], test_data[:,1:]
 
     if select_all:
         feat_idx = list(range(raw_x_train.shape[1]))
     else:
-        feat_idx = [0,1,2,3,4] # TODO: Select suitable feature columns.
+        selector = SelectKBest(f_regression,k=10)
+        selector.fit(raw_x_train,y_train)
+        feat_idx = selector.get_support(indices=True)
+        #feat_idx = [0,1,2,3,4] # TODO: Select s
+        # uitable feature columns.
         
     return raw_x_train[:,feat_idx], raw_x_valid[:,feat_idx], raw_x_test[:,feat_idx], y_train, y_valid
 def trainer(train_loader, valid_loader, model, config, device):
@@ -102,6 +105,7 @@ def trainer(train_loader, valid_loader, model, config, device):
     # Define your optimization algorithm. 
     # TODO: Please check https://pytorch.org/docs/stable/optim.html to get more available algorithms.
     # TODO: L2 regularization (optimizer(weight decay...) or implement by your self).
+   
     optimizer = torch.optim.SGD(model.parameters(), lr=config['learning_rate'], momentum=0.9) 
 
     writer = SummaryWriter() # Writer of tensoboard.
