@@ -129,6 +129,8 @@ class BasicBlock(nn.Module):
         self.block = nn.Sequential(
             nn.Linear(input_dim, output_dim),
             nn.ReLU(),
+            #nn.BatchNorm1d(output_dim),
+            #nn.Dropout(0.3),           
         )
 
     def forward(self, x):
